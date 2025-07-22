@@ -1,0 +1,79 @@
+// filepath: /home/alyssa/Openclassrooms/Gerez-un-projet-collaboratif-en-int-grant-une-demarche-CI-CD/.github/workflows/sonarcloud.yml
+name: SonarCloud Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_run:
+    workflows: ["Backend CI", "Frontend CI"]
+    types:
+      - completed
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Nécessaire pour l'analyse complète
+
+    # Backend setup and analysis
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Run Backend Tests with Coverage
+      working-directory: ./back
+      run: |
+        mvn clean test jacoco:report
+
+    # Frontend setup and analysis
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: front/package-lock.json
+
+    - name: Install Frontend Dependencies
+      working-directory: ./front
+      run: npm ci
+
+    - name: Run Frontend Tests with Coverage
+      working-directory: ./front
+      run: npm run test:ci
+
+    # SonarCloud Analysis
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: SonarCloud Quality Gate
+      uses: sonarqube-quality-gate-action@master
+      timeout-minutes: 5
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: Analysis Summary
+      run: |
+        echo "## 📊 SonarCloud Analysis Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Status:** Code analysis completed" >> $GITHUB_STEP_SUMMARY
+        echo "🔍 **View results:** [SonarCloud Dashboard](https://sonarcloud.io/project/overview?id=VAcheronPradelAlyssa_CI-CD)" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Quality Gate:** Check the detailed report above" >> $GITHUB_STEP_SUMMARY

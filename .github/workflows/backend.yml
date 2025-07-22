@@ -38,6 +38,10 @@ jobs:
       run: |
         mvn clean test
         mvn jacoco:report
+        mvn sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.host.url=https://sonarcloud.io
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     - name: Generate JaCoCo Badge
       id: jacoco
