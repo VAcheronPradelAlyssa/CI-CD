@@ -35,10 +35,11 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run Backend Tests with Coverage
+    - name: Build Backend and Download Dependencies
       working-directory: ./back
       run: |
-        mvn clean test jacoco:report
+        mvn clean compile dependency:copy-dependencies
+        mvn test jacoco:report
 
     # Frontend setup and analysis
     - name: Set up Node.js
@@ -63,12 +64,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-    - name: Check SonarCloud Quality Gate
-      run: |
-        echo "🔍 Checking SonarCloud Quality Gate..."
-        echo "📊 Results will be available in SonarCloud dashboard"
-        echo "⚠️ Manual verification required for Quality Gate status"
-
     - name: Analysis Summary
       run: |
         echo "## 📊 SonarCloud Analysis Summary" >> $GITHUB_STEP_SUMMARY
@@ -81,3 +76,4 @@ jobs:
         echo "- **Backend:** Java code analysis with JaCoCo coverage" >> $GITHUB_STEP_SUMMARY
         echo "- **Frontend:** TypeScript/Angular code analysis" >> $GITHUB_STEP_SUMMARY
         echo "- **Coverage:** Both backend and frontend coverage reports included" >> $GITHUB_STEP_SUMMARY
+        echo "- **Dependencies:** Java libraries analyzed for better precision" >> $GITHUB_STEP_SUMMARY

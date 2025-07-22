@@ -15,6 +15,10 @@
 	<description>L'application de joke par excellence !</description>
 	<properties>
 		<java.version>11</java.version>
+		<sonar.organization>vacheronpradelalyssa</sonar.organization>
+		<sonar.projectKey>VAcheronPradelAlyssa_CI-CD</sonar.projectKey>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -55,6 +59,23 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/dependency</outputDirectory>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
