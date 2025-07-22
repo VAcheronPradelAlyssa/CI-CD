@@ -78,7 +78,7 @@ jobs:
 
     - name: Run Frontend Tests
       working-directory: ./front
-      run: npm run test:ci
+      run: npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
