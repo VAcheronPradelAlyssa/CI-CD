@@ -87,6 +87,20 @@ jobs:
         ls -la
         echo "Contents of coverage directory (if exists):"
         ls -la coverage/ || echo "Coverage directory not found"
+        echo "Looking for lcov.info:"
+        find . -name "lcov.info" -type f || echo "lcov.info not found"
+
+    - name: Check if coverage file exists
+      id: coverage-check
+      working-directory: ./front
+      run: |
+        if [ -f "coverage/lcov.info" ]; then
+          echo "coverage_exists=true" >> $GITHUB_OUTPUT
+          echo "Coverage file found"
+        else
+          echo "coverage_exists=false" >> $GITHUB_OUTPUT
+          echo "Coverage file not found"
+        fi
 
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
@@ -96,8 +110,8 @@ jobs:
         path: front/coverage/
 
     - name: Coverage Summary
+      if: steps.coverage-check.outputs.coverage_exists == 'true'
       uses: irongut/CodeCoverageSummary@v1.3.0
-      if: hashFiles('front/coverage/lcov.info') != ''
       with:
         filename: front/coverage/lcov.info
         badge: true
@@ -108,6 +122,10 @@ jobs:
         indicators: true
         output: both
         thresholds: '60 80'
+
+    - name: Coverage not available
+      if: steps.coverage-check.outputs.coverage_exists == 'false'
+      run: echo "⚠️ Coverage report not generated. Check Angular/Karma configuration."
 
   # Job pour construire les images Docker
   docker-build:
