@@ -1,0 +1,71 @@
+name: Docker Debug
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  docker-debug:
+    name: Debug Docker Authentication
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check secrets
+      run: |
+        echo "Username length: ${#DOCKER_USERNAME}"
+        echo "Password length: ${#DOCKER_PASSWORD}"
+        echo "Username starts with: ${DOCKER_USERNAME:0:5}..."
+        echo "Password starts with: ${DOCKER_PASSWORD:0:10}..."
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Test Docker login
+      run: |
+        echo "Testing Docker login..."
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        echo "Login successful!"
+
+    - name: Test simple build (no push)
+      run: |
+        echo "Testing build without push..."
+        cd back
+        docker build -t test-backend .
+        echo "Build successful!"
+
+    - name: Test push
+      run: |
+        echo "Testing push..."
+        docker tag test-backend ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:test
+        docker push ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:test
+        echo "Push successful!"
+
+    - name: Test Published Images
+      run: |
+        echo "🧪 Testing published Docker images..."
+        
+        # Test backend
+        docker run --rm -d --name test-backend -p 8080:8080 \
+          ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:latest
+        
+        # Test frontend avec le port 80 (Nginx par défaut)
+        docker run --rm -d --name test-frontend -p 4020:80 \
+          ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:latest
+        
+        # Wait for containers to start
+        sleep 30
+        
+        # Test endpoints
+        echo "Testing backend endpoint..."
+        curl -f http://localhost:8080/api/joke || (echo "❌ Backend test failed" && exit 1)
+        echo "✅ Backend test passed"
+        
+        echo "Testing frontend endpoint..."
+        curl -f http://localhost:4020 || (echo "❌ Frontend test failed" && exit 1)
+        echo "✅ Frontend test passed"
+        
+        # Cleanup
+        docker stop test-backend test-frontend 2>/dev/null || true
