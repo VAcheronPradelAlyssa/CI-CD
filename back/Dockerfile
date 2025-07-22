@@ -13,6 +13,10 @@ FROM openjdk:11-jre-slim
 
 WORKDIR /app
 
+# Installer curl pour le healthcheck ET changer vers root temporairement
+USER root
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Créer un utilisateur non-root
 RUN groupadd -r bobapp && useradd -r -g bobapp bobapp
 
