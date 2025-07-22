@@ -1,0 +1,64 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'back/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'back/**'
+
+jobs:
+  backend-tests:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Run Backend Tests
+      working-directory: ./back
+      run: |
+        mvn clean test
+        mvn jacoco:report
+
+    - name: Generate JaCoCo Badge
+      id: jacoco
+      uses: cicirello/jacoco-badge-generator@v2
+      with:
+        jacoco-csv-file: back/target/site/jacoco/jacoco.csv
+
+    - name: Upload Backend Coverage Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-coverage-report
+        path: back/target/site/jacoco/
+
+    - name: Comment Coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: madrapps/jacoco-report@v1.6.1
+      with:
+        paths: ${{ github.workspace }}/back/target/site/jacoco/jacoco.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        min-coverage-overall: 40
+        min-coverage-changed-files: 60
+
+    - name: Backend Tests Summary
+      run: echo "✅ Backend tests and coverage completed successfully"
