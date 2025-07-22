@@ -2,7 +2,7 @@
 
 Clone project:
 
-> git clone XXXXX
+> git clone https://github.com/VAcheronPradelAlyssa/CI-CD.git
 
 ## Front-end 
 
@@ -26,7 +26,7 @@ Build the container:
 
 Start the container:
 
-> docker run -p 8080:8080 --name bobapp-front -d bobapp-front
+> docker run -p 4020:4020 --name bobapp-front -d bobapp-front
 
 ## Back-end
 
@@ -54,4 +54,24 @@ Build the container:
 
 Start the container:
 
-> docker run -p 8080:8080 --name bobapp-back -d bobapp-back 
+> docker run -p 8080:8080 --name bobapp-back -d bobapp-back
+
+## Docker Compose
+
+Pour lancer l'application complète (front + back) avec Docker Compose :
+
+Build et démarrer tous les services:
+
+> docker-compose up --build
+
+Démarrer les services (si déjà buildés):
+
+> docker-compose up
+
+Arrêter tous les services:
+
+> docker-compose down
+
+L'application sera accessible sur :
+- Front-end : http://localhost:4020
+- Back-end API : http://localhost:8080 
