@@ -23,7 +23,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Cache Maven dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -42,7 +42,7 @@ jobs:
         jacoco-csv-file: back/target/site/jacoco/jacoco.csv
 
     - name: Upload Backend Coverage Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: backend-coverage-report
         path: back/target/site/jacoco/
@@ -81,7 +81,7 @@ jobs:
       run: npm run test:ci
 
     - name: Upload Frontend Coverage Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: frontend-coverage-report
         path: front/coverage/
