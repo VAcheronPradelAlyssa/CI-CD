@@ -87,8 +87,50 @@ jobs:
         name: frontend-coverage-report
         path: front/coverage/
 
+    - name: Check if coverage file exists
+      id: coverage-check
+      working-directory: ./front
+      run: |
+        if [ -f "coverage/lcov.info" ] && [ -s "coverage/lcov.info" ]; then
+          echo "coverage_exists=true" >> $GITHUB_OUTPUT
+          echo "✅ Frontend coverage file found"
+        else
+          echo "coverage_exists=false" >> $GITHUB_OUTPUT
+          echo "❌ Frontend coverage file not found"
+        fi
+
+    - name: Frontend Coverage Summary
+      if: steps.coverage-check.outputs.coverage_exists == 'true'
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: front/coverage/lcov.info
+        badge: true
+        fail_below_min: false
+        format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
+        output: both
+        thresholds: '60 80'
+
+    - name: Add Frontend Coverage to Summary
+      if: steps.coverage-check.outputs.coverage_exists == 'true'
+      run: |
+        echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "Coverage report generated successfully ✅" >> $GITHUB_STEP_SUMMARY
+        if [ -f "front/coverage/lcov.info" ]; then
+          echo "📊 Coverage file: front/coverage/lcov.info" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Frontend Coverage Not Available
+      if: steps.coverage-check.outputs.coverage_exists == 'false'
+      run: |
+        echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "⚠️ Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+        echo "Please check Angular/Karma configuration for coverage generation" >> $GITHUB_STEP_SUMMARY
+
     - name: Frontend Tests Completed
-      run: echo "✅ Frontend tests completed with coverage"
+      run: echo "✅ Frontend tests completed"
 
   # Job pour construire les images Docker
   docker-build:
@@ -116,12 +158,22 @@ jobs:
 
     - name: Test Docker Compose
       run: |
-        docker-compose build
-        docker-compose up -d
+        # Utiliser la nouvelle syntaxe docker compose (sans tiret)
+        docker compose build
+        docker compose up -d
         sleep 30
+        
+        # Test des endpoints
+        echo "Testing backend endpoint..."
         curl -f http://localhost:8080/api/joke || exit 1
+        echo "Backend test passed ✅"
+        
+        echo "Testing frontend endpoint..."
         curl -f http://localhost:4020 || exit 1
-        docker-compose down
+        echo "Frontend test passed ✅"
+        
+        # Nettoyer
+        docker compose down
 
   # Job pour déployer (si tous les tests passent)
   deploy:
