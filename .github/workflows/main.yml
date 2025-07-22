@@ -87,47 +87,50 @@ jobs:
         name: frontend-coverage-report
         path: front/coverage/
 
-    - name: Check if coverage file exists
-      id: coverage-check
+    - name: Debug Coverage Files
       working-directory: ./front
       run: |
-        if [ -f "coverage/lcov.info" ] && [ -s "coverage/lcov.info" ]; then
-          echo "coverage_exists=true" >> $GITHUB_OUTPUT
-          echo "✅ Frontend coverage file found"
+        echo "=== Debug Coverage Generation ==="
+        echo "Contents of coverage directory:"
+        ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
+        echo ""
+        echo "Looking for lcov.info:"
+        if [ -f "coverage/lcov.info" ]; then
+          echo "✅ lcov.info found"
+          echo "File size: $(wc -c < coverage/lcov.info) bytes"
+          echo "First 5 lines:"
+          head -5 coverage/lcov.info 2>/dev/null || echo "Could not read file"
         else
-          echo "coverage_exists=false" >> $GITHUB_OUTPUT
-          echo "❌ Frontend coverage file not found"
+          echo "❌ lcov.info not found"
         fi
+        echo ""
+        echo "All files in coverage:"
+        find coverage/ -type f 2>/dev/null || echo "No files found"
 
-    - name: Frontend Coverage Summary
-      if: steps.coverage-check.outputs.coverage_exists == 'true'
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: front/coverage/lcov.info
-        badge: true
-        fail_below_min: false
-        format: markdown
-        hide_branch_rate: false
-        hide_complexity: true
-        indicators: true
-        output: both
-        thresholds: '60 80'
-
-    - name: Add Frontend Coverage to Summary
-      if: steps.coverage-check.outputs.coverage_exists == 'true'
+    - name: Generate Frontend Coverage Summary
+      working-directory: ./front
       run: |
-        echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
-        echo "Coverage report generated successfully ✅" >> $GITHUB_STEP_SUMMARY
-        if [ -f "front/coverage/lcov.info" ]; then
-          echo "📊 Coverage file: front/coverage/lcov.info" >> $GITHUB_STEP_SUMMARY
+        echo "## 📊 Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "coverage/lcov.info" ] && [ -s "coverage/lcov.info" ]; then
+          echo "✅ **Status:** Coverage report generated" >> $GITHUB_STEP_SUMMARY
+          echo "📁 **Report:** Available in artifacts (frontend-coverage-report)" >> $GITHUB_STEP_SUMMARY
+          
+          # Essayer d'extraire quelques métriques de base
+          TOTAL_LINES=$(grep -c "^LF:" coverage/lcov.info 2>/dev/null || echo "0")
+          if [ "$TOTAL_LINES" -gt 0 ]; then
+            echo "📈 **Lines found:** $TOTAL_LINES" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "🔍 **Details:** Check the HTML report in artifacts" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **Status:** Coverage report not generated properly" >> $GITHUB_STEP_SUMMARY
+          echo "🔧 **Action needed:** Check Karma configuration" >> $GITHUB_STEP_SUMMARY
         fi
-
-    - name: Frontend Coverage Not Available
-      if: steps.coverage-check.outputs.coverage_exists == 'false'
-      run: |
-        echo "## Frontend Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
-        echo "⚠️ Coverage report not generated" >> $GITHUB_STEP_SUMMARY
-        echo "Please check Angular/Karma configuration for coverage generation" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
 
     - name: Frontend Tests Completed
       run: echo "✅ Frontend tests completed"
