@@ -80,14 +80,24 @@ jobs:
       working-directory: ./front
       run: npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 
+    - name: List coverage files (debug)
+      working-directory: ./front
+      run: |
+        echo "Contents of front directory:"
+        ls -la
+        echo "Contents of coverage directory (if exists):"
+        ls -la coverage/ || echo "Coverage directory not found"
+
     - name: Upload Frontend Coverage Reports
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: frontend-coverage-report
         path: front/coverage/
 
     - name: Coverage Summary
       uses: irongut/CodeCoverageSummary@v1.3.0
+      if: hashFiles('front/coverage/lcov.info') != ''
       with:
         filename: front/coverage/lcov.info
         badge: true
