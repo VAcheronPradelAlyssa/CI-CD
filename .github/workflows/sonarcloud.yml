@@ -53,7 +53,7 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         with:
           args: >
-            -Dsonar.organization=VAcheronPradelAlyssa
+            -Dsonar.organization=vacheronpradelalyssa
             -Dsonar.projectKey=VAcheronPradelAlyssa_CI-CD
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
