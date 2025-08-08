@@ -1,79 +1,60 @@
-name: SonarCloud Analysis
+name: SonarCloud Unified Analysis
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-  workflow_run:
-    workflows: ["Backend CI", "Frontend CI"]
-    types:
-      - completed
+    branches: [ main, develop ]
 
 jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Nécessaire pour l'analyse complète
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    # Backend setup and analysis
-    - name: Set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
+      # Backend (Java)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Build Backend and Run Tests
+        working-directory: ./back
+        run: |
+          mvn clean verify
+          # Le rapport JaCoCo sera généré ici : back/target/site/jacoco/jacoco.xml
 
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
+      # Frontend (Node.js)
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+      - name: Install Frontend Dependencies
+        working-directory: ./front
+        run: npm ci
+      - name: Run Frontend Tests with Coverage
+        working-directory: ./front
+        run: npm run test:ci # Ce script doit générer coverage/lcov.info
 
-    - name: Build Backend and Download Dependencies
-      working-directory: ./back
-      run: |
-        mvn clean compile dependency:copy-dependencies
-        mvn test jacoco:report
-
-    # Frontend setup and analysis
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: front/package-lock.json
-
-    - name: Install Frontend Dependencies
-      working-directory: ./front
-      run: npm ci
-
-    - name: Run Frontend Tests with Coverage
-      working-directory: ./front
-      run: npm run test:ci
-
-    # SonarCloud Analysis
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-    - name: Analysis Summary
-      run: |
-        echo "## 📊 SonarCloud Analysis Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ **Status:** Code analysis completed" >> $GITHUB_STEP_SUMMARY
-        echo "🔍 **View results:** [SonarCloud Dashboard](https://sonarcloud.io/project/overview?id=VAcheronPradelAlyssa_CI-CD)" >> $GITHUB_STEP_SUMMARY
-        echo "📊 **Quality Gate:** Check the SonarCloud dashboard for detailed results" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📋 Analysis Details" >> $GITHUB_STEP_SUMMARY
-        echo "- **Backend:** Java code analysis with JaCoCo coverage" >> $GITHUB_STEP_SUMMARY
-        echo "- **Frontend:** TypeScript/Angular code analysis" >> $GITHUB_STEP_SUMMARY
-        echo "- **Coverage:** Both backend and frontend coverage reports included" >> $GITHUB_STEP_SUMMARY
-        echo "- **Dependencies:** Java libraries analyzed for better precision" >> $GITHUB_STEP_SUMMARY
+      # SonarCloud analysis (unique étape !)
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -Dsonar.organization=VAcheronPradelAlyssa
+            -Dsonar.projectKey=VAcheronPradelAlyssa_CI-CD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
