@@ -46,6 +46,9 @@ jobs:
       working-directory: ./front
       run: |
         echo "=== Debug Coverage Generation ==="
+        echo "Current directory:"
+        pwd
+        echo ""
         echo "Contents of coverage directory:"
         ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
         echo ""
@@ -53,9 +56,17 @@ jobs:
         if [ -f "coverage/lcov.info" ]; then
           echo "✅ lcov.info found"
           echo "File size: $(wc -c < coverage/lcov.info) bytes"
+          echo "First 5 lines:"
+          head -5 coverage/lcov.info 2>/dev/null || echo "Could not read file"
         else
           echo "❌ lcov.info not found"
         fi
+        echo ""
+        echo "All files in coverage:"
+        find coverage/ -type f 2>/dev/null || echo "No files found"
+        echo ""
+        echo "All directories and files in current location:"
+        ls -la
 
     - name: Generate Frontend Coverage Summary
       working-directory: ./front
