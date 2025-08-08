@@ -65,7 +65,7 @@ jobs:
         echo "All files in coverage:"
         find coverage/ -type f 2>/dev/null || echo "No files found"
         echo ""
-        echo "All directories and files in current location:"
+        echo "All directories, files in current location:"
         ls -la
 
     - name: Generate Frontend Coverage Summary
