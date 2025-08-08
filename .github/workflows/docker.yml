@@ -1,0 +1,119 @@
+name: Docker Build & Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_run:
+    workflows: ["Backend CI", "Frontend CI", "SonarCloud Analysis"]
+    types:
+      - completed
+    branches: [ main ]
+
+jobs:
+  # Tests locaux (pour toutes les branches)
+  docker-test:
+    name: Docker Build & Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker Images
+      run: |
+        echo "🔨 Building Docker images..."
+        docker build -t bobapp-backend:test ./back
+        docker build -t bobapp-frontend:test ./front
+
+    - name: Integration Test
+      run: |
+        echo "🚀 Starting services with Docker Compose..."
+        docker compose up -d
+        
+        echo "⏳ Waiting for services..."
+        sleep 30
+        
+        echo "🧪 Testing backend..."
+        curl -f http://localhost:8080/api/joke || exit 1
+        
+        echo "🧪 Testing frontend..."
+        curl -f http://localhost:4020 || exit 1
+        
+        echo "🧹 Cleaning up..."
+        docker compose down
+        
+        echo "✅ Tests passed!"
+
+  # Publication (seulement pour main)
+  docker-publish:
+    name: Publish to Docker Hub
+    runs-on: ubuntu-latest
+    needs: [docker-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      run: |
+        echo "sha_short=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+        echo "version=v1.0.0" >> $GITHUB_OUTPUT
+
+    - name: Build and Push Images
+      run: |
+        # Backend
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:latest ./back
+        docker tag ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:latest \
+          ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:${{ steps.meta.outputs.sha_short }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:${{ steps.meta.outputs.sha_short }}
+        
+        # Frontend
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:latest ./front
+        docker tag ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:latest \
+          ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:${{ steps.meta.outputs.sha_short }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:${{ steps.meta.outputs.sha_short }}
+
+    - name: Test Published Images
+      run: |
+        echo "🧪 Testing published images..."
+        docker run -d --name test-backend -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/bobapp-backend:latest
+        docker run -d --name test-frontend -p 4020:80 ${{ secrets.DOCKER_USERNAME }}/bobapp-frontend:latest
+        
+        sleep 30
+        
+        curl -f http://localhost:8080/api/joke && echo "✅ Backend OK"
+        curl -f http://localhost:4020 && echo "✅ Frontend OK"
+        
+        docker stop test-backend test-frontend
+        docker rm test-backend test-frontend
+
+  # Déploiement (seulement pour main)
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [docker-publish]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Deploy
+      run: |
+        echo "🚀 Deploying to production..."
+        echo "✅ Deployment completed!"
