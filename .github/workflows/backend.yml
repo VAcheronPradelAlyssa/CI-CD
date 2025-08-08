@@ -10,6 +10,7 @@ on:
     branches: [ main ]
     paths:
       - 'back/**'
+  workflow_dispatch:  # Permet le déclenchement manuel
 
 jobs:
   backend-tests:
@@ -20,10 +21,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
+    - name: Set up JDK 11
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
 
     - name: Cache Maven dependencies
@@ -38,10 +39,6 @@ jobs:
       run: |
         mvn clean test
         mvn jacoco:report
-        mvn sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }} -Dsonar.host.url=https://sonarcloud.io
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     - name: Generate JaCoCo Badge
       id: jacoco
